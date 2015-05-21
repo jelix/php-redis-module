@@ -14,7 +14,7 @@ Jelix 1.7+ with Composer.
 In your project:
 
 ```
-composer require "jelix/minify-module"
+composer require "jelix/php-redis-module"
 ```
 
 Then declare the module into the configuration of your application
