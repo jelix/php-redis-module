@@ -1,0 +1,24 @@
+{
+    "name": "jelix/phpredis-module",
+    "type": "jelix-module",
+    "description": "module providing a Redis plugin for jKVDb into a Jelix application.",
+    "keywords": ["jkvdb", "jelix", "redis"],
+    "homepage": "http://jelix.org",
+    "license": "LGPL-2.1",
+    "authors": [
+        {
+            "name": "Laurent Jouanneau",
+            "email": "laurent@jelix.org"
+        }
+    ],
+    "require": {
+    },
+    "minimum-stability": "stable",
+    "extra" : {
+        "jelix" : {
+            "modules": [
+                "jredis"
+            ]
+        }
+    }
+}
