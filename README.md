@@ -35,17 +35,17 @@ You can use the plugin. Its name is "redis"
 
 ## configuration
 
-For the configuration, indicate a @@host@@ and a @@port@@ parameter in the profiles.ini.php
+For the configuration, indicate a ```host``` and a ```port``` parameter in the profiles.ini.php
 file. Example of a profile:
 
-<code ini>
+```ini
 [jkvdb:myredis]
 driver=redis
 host = localhost
 port = 6379
-</code>
+```
 
-This driver supports the @@I@jIKVttl@@ interface.
+This driver supports the ```jIKVttl``` interface.
 
 ## unit tests
 

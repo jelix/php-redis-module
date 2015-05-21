@@ -1,5 +1,5 @@
 {
-    "name": "jelix/phpredis-module",
+    "name": "jelix/php-redis-module",
     "type": "jelix-module",
     "description": "module providing a Redis plugin for jKVDb into a Jelix application.",
     "keywords": ["jkvdb", "jelix", "redis"],
