@@ -1,7 +1,7 @@
 This is a plugin for jKVDb, the nosql API of Jelix.
 
 This plugin allows to access to a Redis database through jKVDb.
-It uses the library [php-redis](https://github.com/sash/php-redis) (a bit patched).
+It uses the library [php-redis](https://github.com/jelix/php-redis).
 
 This plugin is for Jelix 1.7.x and higher. See the jelix/jelix repository to see
 its history before Jelix 1.7.
@@ -36,3 +36,5 @@ This driver supports the ```jIKVttl``` interface.
 ## unit tests
 
 Unit tests are in Testapp, in the jelix/jelix repository.
+
+
