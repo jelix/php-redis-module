@@ -39,6 +39,10 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
 
         // OK, let's connect now
         $cnx = new Redis($this->_profile['host'], $this->_profile['port']);
+
+        if (isset($this->_profile['db']) && intval($this->_profile['db']) != 0) {
+            $cnx->select_db($this->_profile['db']);
+        }
         return $cnx;
     }
 

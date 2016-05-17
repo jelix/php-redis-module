@@ -89,6 +89,10 @@ class redisCacheDriver implements jICacheDriver {
 
         // OK, let's connect now
         $this->redis = new Redis($params['host'], $params['port']);
+
+        if (isset($params['db']) && intval($params['db']) != 0) {
+            $this->redis->select_db($params['db']);
+        }
     }
 
     /**
