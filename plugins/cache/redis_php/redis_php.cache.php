@@ -10,9 +10,7 @@
  * @licence  http://www.gnu.org/licenses/lgpl.html GNU Lesser General Public Licence, see LICENCE file
  */
 
-require_once(__DIR__ . '/../../../lib/Redis.php');
-
-class redisCacheDriver implements jICacheDriver {
+class redis_phpCacheDriver implements jICacheDriver {
 
     /**
     * profil name used in the ini file
@@ -51,7 +49,21 @@ class redisCacheDriver implements jICacheDriver {
     protected $key_prefix = '';
 
     /**
-     * @param Redis the redis connection
+     * method to flush the keys when key_prefix is used
+     *
+     * direct: uses SCAN and DEL, but it can take huge time
+     * jcacheredisworker: it stores the keys prefix to delete into a redis list
+     *     named 'jcacheredisdelkeys'.
+     *     You can use a script to launch a worker which pops from this list
+     *     prefix of keys to delete, and delete them with SCAN/DEL redis commands.
+     *     See the redisworker controller in the jelix module.
+     * event: send a jEvent. It's up to your application to respond to this event
+     *     and to implement your prefered method to delete all keys.
+     */
+    protected $key_prefix_flush_method = 'direct';
+
+    /**
+     * @param \PhpRedis\Redis the redis connection
      */
     protected $redis;
 
@@ -87,12 +99,27 @@ class redisCacheDriver implements jICacheDriver {
             $this->key_prefix = $params['key_prefix'];
         }
 
+        if ($this->key_prefix && isset($params['key_prefix_flush_method'])) {
+            if (in_array($params['key_prefix_flush_method'],
+                         array('direct', 'jcacheredisworker', 'event'))) {
+                $this->key_prefix_flush_method = $params['key_prefix_flush_method'];
+            }
+        }
+
         // OK, let's connect now
-        $this->redis = new Redis($params['host'], $params['port']);
+        $this->redis = new \PhpRedis\Redis($params['host'], $params['port']);
 
         if (isset($params['db']) && intval($params['db']) != 0) {
             $this->redis->select_db($params['db']);
         }
+    }
+
+    /**
+     * Returns the redis api
+     * @return \PhpRedis\Redis
+     */
+    public function getRedis() {
+        return $this->redis;
     }
 
     /**
@@ -220,7 +247,7 @@ class redisCacheDriver implements jICacheDriver {
 
     /**
     * remove from the cache data of which TTL was expired
-    * element with TTL expired already removed => Nothing to do because memcache have an internal garbage mechanism
+    * element with TTL expired already removed => Nothing to do because redis has an internal garbage mechanism
     * @return boolean
     */
     public function garbage() {
@@ -228,11 +255,31 @@ class redisCacheDriver implements jICacheDriver {
     }
 
     /**
-    * clear all data in the cache
+    * clear all data in the cache.
+    *
+    * If key_prefix is set, only keys with that prefix will be removed.
+    * Note that in that case, it can result in a huge performance issue.
+    * See key_prefix_flush_method to configure the best method for your
+    * app and your server.
     * @return boolean       false if failure
     */
     public function flush() {
-        return ($this->redis->flushall()  == 'OK');
+        if (!$this->key_prefix) {
+            return ($this->redis->flushdb()  == 'OK');
+        }
+        switch($this->key_prefix_flush_method) {
+            case 'direct':
+                $this->redis->flushByPrefix($this->key_prefix);
+                return true;
+            case 'event':
+                jEvent::notify('jCacheRedisFlushKeyPrefix', array('prefix'=>$this->key_prefix,
+                                                                  'profile' =>$this->profileName));
+                return true;
+            case 'jcacheredisworker':
+                $this->redis->rpush('jcacheredisdelkeys', $this->key_prefix);
+                return true;
+        }
+        return false;
     }
 
     protected function getUsedKey($key) {
@@ -266,7 +313,7 @@ class redisCacheDriver implements jICacheDriver {
             foreach($val as $k=>$v) {
                 $val[$k] = $this->unesc($v);
             }
-            return $val;
         }
+        return $val;
     }
 }

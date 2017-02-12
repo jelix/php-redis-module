@@ -12,6 +12,7 @@
         }
     ],
     "require": {
+        "jelix/php-redis": "^2.0.0"
     },
     "minimum-stability": "stable",
     "extra" : {

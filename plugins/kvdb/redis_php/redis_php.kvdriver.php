@@ -1,23 +1,37 @@
 <?php
 /**
+ * @package     jelix
+ * @subpackage  kvdb
  * @author      Yannick Le Guédart
  * @contributor Laurent Jouanneau
- * @copyright   2009 Yannick Le Guédart, 2010-2015 Laurent Jouanneau
+ * @copyright   2009 Yannick Le Guédart, 2010-2016 Laurent Jouanneau
  *
  * @link     http://www.jelix.org
  * @licence  http://www.gnu.org/licenses/lgpl.html GNU Lesser General Public Licence, see LICENCE file
  */
 
-require_once(__DIR__ . '/../../../lib/Redis.php');
-
-class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
+class redis_phpKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
 
     protected $key_prefix = '';
 
     /**
-     * Connects to the redis server
+     * method to flush the keys when key_prefix is used
      *
-     * @return Redis object
+     * direct: uses SCAN and DEL, but it can take huge time
+     * jkvdbredisworker: it stores the keys prefix to delete into a redis list
+     *     named 'jkvdbredisdelkeys'.
+     *     You can use a script to launch a worker which pops from this list
+     *     prefix of keys to delete, and delete them with SCAN/DEL redis commands.
+     *     See the redisworker controller in the jelix module.
+     * event: send a jEvent. It's up to your application to respond to this event
+     *     and to implement your prefered method to delete all keys.
+     */
+    protected $key_prefix_flush_method = 'direct';
+
+    /**
+     * Connects to the redis server
+     * @return \PhpRedis\Redis object
+     * @throws jException
      */
     protected function _connect() {
 
@@ -37,8 +51,15 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
             $this->key_prefix = $this->_profile['key_prefix'];
         }
 
+        if ($this->key_prefix && isset($this->_profile['key_prefix_flush_method'])) {
+            if (in_array($this->_profile['key_prefix_flush_method'],
+                         array('direct', 'jkvdbredisworker', 'event'))) {
+                $this->key_prefix_flush_method = $this->_profile['key_prefix_flush_method'];
+            }
+        }
+
         // OK, let's connect now
-        $cnx = new Redis($this->_profile['host'], $this->_profile['port']);
+        $cnx = new \PhpRedis\Redis($this->_profile['host'], $this->_profile['port']);
 
         if (isset($this->_profile['db']) && intval($this->_profile['db']) != 0) {
             $cnx->select_db($this->_profile['db']);
@@ -66,6 +87,13 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
         }
 
         return $prefix.$key;
+    }
+
+    /**
+     * @return \PhpRedis\Redis
+     */
+    public function getRedis() {
+        return $this->_connection;
     }
 
     public function get($key) {
@@ -112,7 +140,22 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
     }
 
     public function flush() {
-        return ($this->_connection->flushall()  == 'OK');
+        if (!$this->key_prefix) {
+            return ($this->_connection->flushdb()  == 'OK');
+        }
+        switch($this->key_prefix_flush_method) {
+            case 'direct':
+                $this->_connection->flushByPrefix($this->key_prefix);
+                return true;
+            case 'event':
+                jEvent::notify('jKvDbRedisFlushKeyPrefix', array('prefix'=>$this->key_prefix,
+                                                                 'profile' =>$this->_profile['_name']));
+                return true;
+            case 'jkvdbredisworker':
+                $this->_connection->rpush('jkvdbredisdelkeys', $this->key_prefix);
+                return true;
+        }
+        return false;
     }
 
     public function append($key, $value) {
@@ -144,10 +187,10 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
     }
 
     public function increment($key, $incvalue = 1) {
-        $usedkey = $this->getUsedKey($key);
         $val = $this->get($key);
         if ($val === null || !is_numeric($val) || !is_numeric($incvalue))
             return false;
+        $usedkey = $this->getUsedKey($key);
         if (intval($val) == $val)
             return $this->_connection->incr($usedkey, intval($incvalue));
         else { // float values
@@ -159,10 +202,10 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
     }
 
     public function decrement($key, $decvalue = 1) {
-        $usedkey = $this->getUsedKey($key);
         $val = $this->get($key);
         if ($val === null || !is_numeric($val) || !is_numeric($decvalue))
             return false;
+        $usedkey = $this->getUsedKey($key);
         if (intval($val) == $val)
             return $this->_connection->decr($usedkey, intval($decvalue));
         else { // float values
@@ -214,8 +257,8 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
             foreach($val as $k=>$v) {
                 $val[$k] = $this->unesc($v);
             }
-            return $val;
         }
+        return $val;
     }
 
     // jIKVSet -------------------------------------------------------------
@@ -225,7 +268,7 @@ class redisKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
     }
 
     public function sRemove($skey, $value) {
-        return $this->_connection->srem($this->getUsedKey($skey), $decvalue);
+        return $this->_connection->srem($this->getUsedKey($skey), $value);
     }
 
     public function sCount($skey) {
