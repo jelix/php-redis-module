@@ -1,8 +1,8 @@
 {
     "name": "jelix/php-redis-plugin",
     "type": "jelix-module",
-    "description": "a Redis plugin for Jelix",
-    "keywords": ["jkvdb", "jelix", "redis"],
+    "description": "Redis plugins for Jelix, using a pure PHP Redis API",
+    "keywords": ["jkvdb", "jcache", "jelix", "redis"],
     "homepage": "http://jelix.org",
     "license": "LGPL-2.1",
     "authors": [
