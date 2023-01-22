@@ -4,7 +4,7 @@
  * @subpackage  cache
  * @author      Yannick Le Guédart
  * @contributor Laurent Jouanneau
- * @copyright   2009 Yannick Le Guédart, 2010-2016 Laurent Jouanneau
+ * @copyright   2009 Yannick Le Guédart, 2010-2023 Laurent Jouanneau
  *
  * @link     http://www.jelix.org
  * @licence  http://www.gnu.org/licenses/lgpl.html GNU Lesser General Public Licence, see LICENCE file
@@ -150,14 +150,6 @@ class redis_phpCacheDriver implements jICacheDriver {
     */
     public function set($key, $value, $ttl = 0)
     {
-        if (function_exists('\\Jelix\\Utilities\\is_resource')) {
-            if (\Jelix\Utilities\is_resource($value))  {
-                return false;
-            }
-        }
-        else if (is_resource($value)) {
-            return false;
-        }
         $used_key = $this->getUsedKey($key);
         $res = $this->redis->set($used_key, $this->esc($value));
 

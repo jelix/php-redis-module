@@ -4,7 +4,7 @@
  * @subpackage  kvdb
  * @author      Yannick Le Guédart
  * @contributor Laurent Jouanneau
- * @copyright   2009 Yannick Le Guédart, 2010-2016 Laurent Jouanneau
+ * @copyright   2009 Yannick Le Guédart, 2010-2023 Laurent Jouanneau
  *
  * @link     http://www.jelix.org
  * @licence  http://www.gnu.org/licenses/lgpl.html GNU Lesser General Public Licence, see LICENCE file
@@ -27,14 +27,6 @@ class redis_phpKVDriver extends jKVDriver implements jIKVSet, jIKVttl {
      *     and to implement your prefered method to delete all keys.
      */
     protected $key_prefix_flush_method = 'direct';
-
-    protected function isResource($value) {
-        if (function_exists('\\Jelix\\Utilities\\is_resource')) {
-            return \Jelix\Utilities\is_resource($value);
-        }
-        return is_resource($value);
-    }
-
 
     /**
      * Connects to the redis server
